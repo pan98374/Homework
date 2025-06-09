@@ -369,7 +369,7 @@ SortResult testSort(void (*sortFunc)(int*, int), const string& name, int Test_Da
 | 4000 | 13983.300           | 691.761        | 673.281        | 936.611       |
 | 5000 | 21320.600           | 856.615        | 897.296        | 1179.840      |
 
-![aaa](https://github.com/user-attachments/assets/a577dfda-1265-4041-a0fb-1fbcf8a16246)
+![aaa](https://github.com/kronclock/Homework/blob/main/homework1/pictures/average.webp)
 
 ## 編譯與執行指令
 
