@@ -28,7 +28,8 @@
 ## 程式實作
 header.h
 ```cpp
-// MinPQ
+#pragma once
+// MinPQ.h
 template <class T>
 class MinPQ {
 public:
@@ -38,7 +39,7 @@ public:
     virtual void Push(const T& x) = 0;            // 將元素加入佇列
     virtual void Pop() = 0;                       // 移除最小值元素
 };
-// MinHeap
+// MinHeap.h
 #include <vector>
 #include <stdexcept>
 
@@ -102,32 +103,108 @@ public:
         if (!IsEmpty())
             HeapifyDown(0);
     }
+    T FindMax() const {
+        if (IsEmpty())
+            throw std::runtime_error("Heap is empty");
+
+        int n = heap.size();
+        int start = n / 2;  // 葉節點起點
+        T maxVal = heap[start];
+        for (int i = start + 1; i < n; ++i) {
+            if (heap[i] > maxVal)
+                maxVal = heap[i];
+        }
+        return maxVal;
+    }
 };
+
 ```
 main.cpp
 ```cpp
 //Main
 #include <iostream>
-#include "MinHeap.h"
+#include <fstream>
+#include <vector>
+#include <chrono>
+#include "header.h"
+
 int main() {
     MinHeap<int> h;
+    std::ifstream fin("input.txt");
 
-    int a[11] = { 10, 2, 16, 30, 8, 28, 4, 12, 20, 6, 18 };
-
-    for (int i = 0; i < 11; i++)
-        h.Push(a[i]);
-
-    while (!h.IsEmpty()) {
-        std::cout << h.Top() << " ";
-        h.Pop();
+    if (!fin) {
+        std::cerr << "無法開啟 input.txt 檔案\n";
+        return 1;
     }
+
+    int x;
+    std::vector<int> data;
+    while (fin >> x) {
+        data.push_back(x);
+        h.Push(x);
+    }
+    fin.close();
+
+    // 測試 Min（堆頂）
+    auto startMin = std::chrono::high_resolution_clock::now();
+    std::cout << "Min: " << h.Top() << std::endl;
+    auto endMin = std::chrono::high_resolution_clock::now();
+
+    // 測試 Max（線性掃描）
+    auto startMax = std::chrono::high_resolution_clock::now();
+    std::cout << "Max: " << h.FindMax() << std::endl;
+    auto endMax = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double, std::micro> durationMin = endMin - startMin;
+    std::chrono::duration<double, std::micro> durationMax = endMax - startMax;
+
+    std::cout << "Min 操作時間: " << durationMin.count() << " us\n";
+    std::cout << "Max 操作時間: " << durationMax.count() << " us\n";
 
     return 0;
 }
 ```
 ## 效能分析
+1. 時間複雜度分析
+   
+	|操作| 時間複雜度 |說明|
+	| --------- | -------- | -------------------------------------- |
+	| `IsEmpty` | $O(1)$     | 直接檢查內部 vector 是否為空，屬常數時間操作。            |
+	| `Top`     | $O(1)$     | 回傳 heap 的根節點（index 0），不需搜尋或比對。         |
+	| `Push`    | $O(\log n)$ | 插入元素後進行上移 (HeapifyUp)，最多 log n 次交換。    |
+	| `Pop`     | $O(log n)$ | 移除根節點後進行下移 (HeapifyDown)，最多 log n 次交換。 |
+
+	> 使用最小堆實作的優先佇列在**插入與刪除操作**上都維持了 $O(log n)$ 的效率，與標準最大堆實作一致，符合期望的效能設計。
+
+2. 空間複雜度：
+
+	| 資料結構      | 空間複雜度 | 說明                         |
+	| --------- | ----- | ------------------------------- |
+	| `MinHeap` | O(n)  | 內部使用 `std::vector<T>` 儲存 n 筆資料。 |
+
 
 ## 測試與驗證
+
+#### 測試案例
+
+| Size | Min（Top）(us) | Max（FindMax）(us) |
+| ---- | ------------ | ---------------- |
+| 50   | 6.133        | 5.458            |
+| 100  | 1.108        | 3.696            |
+| 500  | 1.313        | 10.710           |
+| 1000 | 1.830        | 21.764           |
+| 2000 | 2.681        | 63.227           |
+| 3000 | 4.243        | 60.168           |
+| 4000 | 3.862        | 135.099          |
+| 5000 | 7.192        | 197.085          |
+
+
+#### 測試結論
+| 操作                | 理論時間複雜度 | 實測時間（微秒）  | 說明                  |
+| ----------------- | ------- | --------- | ------------------- |
+| Min (`Top()`)     | O(1)    | 極小（<1 us） | 直接存取 heap\[0]，快速且穩定 |
+| Max (`FindMax()`) | O(n)    | 明顯較慢      | 需遍歷約一半節點，耗時明顯上升     |
+
 
 ## 結論  
 
@@ -139,16 +216,16 @@ int main() {
 ## 申論及開發報告  
 
 1. **抽象類別設計**  
-設計 ```MinPQ``` 抽象類別，定義統一介面，包含 ```IsEmpty```、```Top```、```Push```、```Pop ```四個操作，便於後續實作不同資料結構版本的最小優先佇列。
+設計 `MinPQ` 抽象類別，定義統一介面，包含 `IsEmpty`、`Top`、`Push`、`Pop `四個操作，便於後續實作不同資料結構版本的最小優先佇列。
 
 2. **使用最小堆實作**  
-透過 ```std::vector``` 實作 ```MinHeap``` 類別，維持最小堆結構，保證插入與刪除操作的時間複雜度為 $O(\log n)$，查詢最小值與判斷是否為空的時間為 $O(1)$。
+透過 `std::vector` 實作 `MinHeap` 類別，維持最小堆結構，保證插入與刪除操作的時間複雜度為 $O(\log n)$，查詢最小值與判斷是否為空的時間為 $O(1)$。
 
 3. **上移與下移操作**  
-```HeapifyUp``` 用於插入時維持堆序性，```HeapifyDown``` 用於刪除最小值後重新調整堆結構，兩者為維持正確性的核心。
+`HeapifyUp` 用於插入時維持堆序性，`HeapifyDown` 用於刪除最小值後重新調整堆結構，兩者為維持正確性的核心。
 
 4. **錯誤處理機制**  
-當堆為空時呼叫 ```Top``` 或 ```Pop``` 會丟出例外，確保程式不會異常終止，提升使用者與開發者的安全性。
+當堆為空時呼叫 `Top` 或 `Pop` 會丟出例外，確保程式不會異常終止，提升使用者與開發者的安全性。
 
 5. **測試與驗證**  
-透過插入與逐一輸出元素的方式測試 ```MinHeap```，驗證其能正確輸出遞增序列，證明堆操作正確無誤。
+透過插入與逐一輸出元素的方式測試 `MinHeap`，驗證其能正確輸出遞增序列，證明堆操作正確無誤。
